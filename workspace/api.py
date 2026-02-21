@@ -8,7 +8,7 @@ import httpx
 import numpy as np
 import torch
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image
 from pydantic import BaseModel, HttpUrl
@@ -72,12 +72,12 @@ def save_detection_results(request_id, content):
 # --- API Endpoints ---
 @app.post(
     "/detect",
-    summary="이미지 URL을 이용한 차량 객체 인식",
+    summary="이미지 파일을 이용한 차량 객체 인식",
     description="""
-입력받은 이미지 URL에서 이미지를 다운로드하여 차량(large/small vehicle)을 인식합니다.
+업로드된 이미지 파일에서 차량(large/small vehicle)을 인식합니다.
 
-**요청 Body (JSON):**
-- `file_url`: 분석할 이미지의 HTTP(S) URL
+**요청 형식 (multipart/form-data):**
+- `file`: 분석할 이미지 파일 (예: jpg, png 등)
 - `request_id`: 요청을 식별하기 위한 고유 문자열
 
 **응답 Body (JSON):**
@@ -93,17 +93,17 @@ def save_detection_results(request_id, content):
 """,
     response_description="인식 결과와 저장된 아티팩트를 조회할 수 있는 URL이 포함된 JSON 응답.",
 )
-async def detect_objects_from_url(request: ImageUrlRequest):
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(str(request.file_url))
-            response.raise_for_status()
-            contents = await response.aread()
-        except httpx.RequestError as e:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Could not fetch image from URL for request_id {request.request_id}: {e}",
-            )
+async def detect_objects_from_file(
+    file: UploadFile = File(...),
+    request_id: str = Form(...)
+):
+    try:
+        contents = await file.read()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not read uploaded file for request_id {request_id}: {e}",
+        )
 
     try:
         pil_image = Image.open(io.BytesIO(contents)).convert("RGB")
@@ -112,7 +112,7 @@ async def detect_objects_from_url(request: ImageUrlRequest):
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=f"Could not read image data for request_id {request.request_id}.",
+            detail=f"Could not read image data for request_id {request_id}.",
         )
 
     results = model(cv_image, device=device)
@@ -158,11 +158,11 @@ async def detect_objects_from_url(request: ImageUrlRequest):
                     )
             except Exception as e:
                 print(
-                    f"Error processing a detection for request_id {request.request_id}: {e}"
+                    f"Error processing a detection for request_id {request_id}: {e}"
                 )
                 continue
 
-    output_image_filename = f"{request.request_id}.jpg"
+    output_image_filename = f"{request_id}.jpg"
     output_filepath = os.path.join(OUTPUT_DIR, output_image_filename)
 
     save_success = cv2.imwrite(output_filepath, cv_image)
@@ -176,18 +176,18 @@ async def detect_objects_from_url(request: ImageUrlRequest):
     image_base64 = base64.b64encode(buffer).decode("utf-8")
 
     response_content = {
-        "request_id": request.request_id,
+        "request_id": request_id,
         "detected_objects": detected_objects,
         "processed_image_b64": image_base64,
         "saved_filename": output_image_filename,
-        "image_url": f"/images/{request.request_id}" if output_image_filename else None,
-        "result_url": f"/results/{request.request_id}"
+        "image_url": f"/images/{request_id}" if output_image_filename else None,
+        "result_url": f"/results/{request_id}"
         if output_image_filename
         else None,
     }
 
     if output_image_filename:
-        save_detection_results(request.request_id, response_content)
+        save_detection_results(request_id, response_content)
 
     return JSONResponse(content=response_content)
 

@@ -1,0 +1,18 @@
+# 캐시 및 임시 파일 무시
+__pycache__/
+**/__pycache__/
+**/**/__pycache__/
+<<<<<<< HEAD
+*.py[cod]
+
+# 로그/업로드 디렉토리 무시
+data/
+test/output/
+train/datasets/
+train/logs/
+train/runs/
+workspace/outputs
+workspace/models
+=======
+*.py[cod]
+>>>>>>> c1a7d9f58be2df7763531b220fb1b95a6f2d62e8

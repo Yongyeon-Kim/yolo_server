@@ -1,0 +1,46 @@
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+line-length = 120
+indent-width = 4
+
+[lint]
+# 기본적으로 Pyflakes('F')와 pycodestyle('E') 코드의 하위 집합을 활성화합니다.
+select = ["E4", "E7", "E9", "F"]
+ignore = []
+
+# 활성화된 모든 규칙에 대한 수정 허용.
+fixable = ["ALL"]
+unfixable = []
+
+# 밑줄 접두사가 붙은 경우 사용하지 않는 변수를 허용합니다.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
